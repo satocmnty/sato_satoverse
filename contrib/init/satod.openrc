@@ -1,0 +1,92 @@
+#!/sbin/runscript
+
+# backward compatibility for existing gentoo layout 
+#
+if [ -d "/var/lib/sato/.sato" ]; then
+	SATOD_DEFAULT_DATADIR="/var/lib/sato/.sato"
+else
+	SATOD_DEFAULT_DATADIR="/var/lib/satod"
+fi
+
+SATOD_CONFIGFILE=${SATOD_CONFIGFILE:-/etc/sato/sato.conf}
+SATOD_PIDDIR=${SATOD_PIDDIR:-/var/run/satod}
+SATOD_PIDFILE=${SATOD_PIDFILE:-${SATOD_PIDDIR}/satod.pid}
+SATOD_DATADIR=${SATOD_DATADIR:-${SATOD_DEFAULT_DATADIR}}
+SATOD_USER=${SATOD_USER:-${SATO_USER:-sato}}
+SATOD_GROUP=${SATOD_GROUP:-sato}
+SATOD_BIN=${SATOD_BIN:-/usr/bin/satod}
+SATOD_NICE=${SATOD_NICE:-${NICELEVEL:-0}}
+SATOD_OPTS="${SATOD_OPTS:-${SATO_OPTS}}"
+
+name="Sato Core Daemon"
+description="Sato cryptocurrency P2P network daemon"
+
+command="/usr/bin/satod"
+command_args="-pid=\"${SATOD_PIDFILE}\" \
+		-conf=\"${SATOD_CONFIGFILE}\" \
+		-datadir=\"${SATOD_DATADIR}\" \
+		-daemon \
+		${SATOD_OPTS}"
+
+required_files="${SATOD_CONFIGFILE}"
+start_stop_daemon_args="-u ${SATOD_USER} \
+			-N ${SATOD_NICE} -w 2000"
+pidfile="${SATOD_PIDFILE}"
+
+# The retry schedule to use when stopping the daemon. Could be either
+# a timeout in seconds or multiple signal/timeout pairs (like
+# "SIGKILL/180 SIGTERM/300")
+retry="${SATOD_SIGTERM_TIMEOUT}"
+
+depend() {
+	need localmount net
+}
+
+# verify
+# 1) that the datadir exists and is writable (or create it)
+# 2) that a directory for the pid exists and is writable
+# 3) ownership and permissions on the config file
+start_pre() {
+	checkpath \
+	-d \
+	--mode 0750 \
+	--owner "${SATOD_USER}:${SATOD_GROUP}" \
+	"${SATOD_DATADIR}"
+
+	checkpath \
+	-d \
+	--mode 0755 \
+	--owner "${SATOD_USER}:${SATOD_GROUP}" \
+	"${SATOD_PIDDIR}"
+
+	checkpath -f \
+	-o ${SATOD_USER}:${SATOD_GROUP} \
+	-m 0660 \
+	${SATOD_CONFIGFILE}
+
+	checkconfig || return 1
+}
+
+checkconfig()
+{
+	if ! grep -qs '^rpcpassword=' "${SATOD_CONFIGFILE}" ; then
+		eerror ""
+		eerror "ERROR: You must set a secure rpcpassword to run satod."
+		eerror "The setting must appear in ${SATOD_CONFIGFILE}"
+		eerror ""
+		eerror "This password is security critical to securing wallets "
+		eerror "and must not be the same as the rpcuser setting."
+		eerror "You can generate a suitable random password using the following "
+		eerror "command from the shell:"
+		eerror ""
+		eerror "bash -c 'tr -dc a-zA-Z0-9 < /dev/urandom | head -c32 && echo'"
+		eerror ""
+		eerror "It is recommended that you also set alertnotify so you are "
+		eerror "notified of problems:"
+		eerror ""
+		eerror "ie: alertnotify=echo %%s | mail -s \"Sato Alert\"" \
+			"admin@foo.com"
+		eerror ""
+		return 1
+	fi
+}

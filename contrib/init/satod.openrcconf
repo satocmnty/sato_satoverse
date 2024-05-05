@@ -1,0 +1,33 @@
+# /etc/conf.d/satod: config file for /etc/init.d/satod
+
+# Config file location
+#SATOD_CONFIGFILE="/etc/sato/sato.conf"
+
+# What directory to write pidfile to?  (created and owned by $SATOD_USER)
+#SATOD_PIDDIR="/var/run/satod"
+
+# What filename to give the pidfile
+#SATOD_PIDFILE="${SATOD_PIDDIR}/satod.pid"
+
+# Where to write satod data (be mindful that the blockchain is large)
+#SATOD_DATADIR="/var/lib/satod"
+
+# User and group to own satod process
+#SATOD_USER="sato"
+#SATOD_GROUP="sato"
+
+# Path to satod executable
+#SATOD_BIN="/usr/bin/satod"
+
+# Nice value to run satod under
+#SATOD_NICE=0
+
+# Additional options (avoid -conf and -datadir, use flags above)
+#SATOD_OPTS=""
+
+# The timeout in seconds OpenRC will wait for satod to terminate
+# after a SIGTERM has been raised.
+# Note that this will be mapped as argument to start-stop-daemon's
+# '--retry' option, which means you can specify a retry schedule
+# here. For more information see man 8 start-stop-daemon.
+SATOD_SIGTERM_TIMEOUT=60
